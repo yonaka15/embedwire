@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yt-follow demo</title>
+<style>
+  body { font: 14px/1.6 system-ui, sans-serif; margin: 0; padding: 16px; max-width: 720px; margin-inline: auto; }
+  .embed { position: relative; aspect-ratio: 16/9; }
+  .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .bar { display: flex; gap: 12px; align-items: center; margin: 8px 0; font-size: 12px; }
+  .bar b { font-family: ui-monospace, monospace; }
+  .rows { list-style: none; margin: 0; padding: 0; height: 240px; overflow-y: auto; border: 1px solid #ccc; position: relative; }
+  .row { display: grid; grid-template-columns: 56px 1fr; gap: 8px; padding: 2px 8px; }
+  .row.is-now { background: #eef3ff; }
+  .row button { font: inherit; font-family: ui-monospace, monospace; background: none; border: 0; padding: 0; color: #888; text-align: right; }
+  .row button:not([disabled]) { color: #1a4fd8; cursor: pointer; text-decoration: underline; }
+  .jump { display: block; margin: 8px auto 0; }
+  pre { font-size: 11px; background: #f6f6f6; padding: 8px; max-height: 160px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>yt-follow</h1>
+<p>A transcript that follows a <code>youtube-nocookie</code> embed over raw <code>postMessage</code> — no <code>iframe_api</code> script loaded. Press play; wheel over the list to stop following; click a timestamp to seek.</p>
+
+<div class="embed">
+  <!-- any video works; `enablejsapi=1` is the only requirement -->
+  <iframe id="ytp" src="https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ?enablejsapi=1" title="demo" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+</div>
+<div class="bar">
+  <span>state: <b data-state>connecting…</b></span>
+  <span>now: <b data-now>0:00</b></span>
+  <label><input type="checkbox" checked data-follow> follow</label>
+</div>
+<ol class="rows" data-rows></ol>
+<button class="jump" data-jump hidden>▶ back to the current line</button>
+<pre data-log></pre>
+
+<script type="module">
+  import { connect, follow } from '../src/index.js';
+
+  // Fake "transcript": one row every 5 s of Big Buck Bunny.
+  const rowsEl = document.querySelector('[data-rows]');
+  for (let t = 0; t < 600; t += 5) {
+    const li = document.createElement('li');
+    li.className = 'row';
+    li.dataset.t = t;
+    li.innerHTML = `<button type="button" data-seek disabled>${mmss(t)}</button><span>line at ${mmss(t)}</span>`;
+    rowsEl.appendChild(li);
+  }
+  function mmss(s) { return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; }
+
+  const stateEl = document.querySelector('[data-state]');
+  const nowEl = document.querySelector('[data-now]');
+  const box = document.querySelector('[data-follow]');
+  const jump = document.querySelector('[data-jump]');
+  const logEl = document.querySelector('[data-log]');
+  const log = (name, props) => { logEl.textContent = `${name} ${JSON.stringify(props)}\n` + logEl.textContent; };
+
+  const player = connect(document.getElementById('ytp'));
+  player.on('*', log);
+  player.on('ready', () => { stateEl.textContent = 'following'; });
+  player.on('gaveup', () => { stateEl.textContent = 'player never answered'; });
+
+  const f = follow(rowsEl, player, {
+    onTick: (now) => { nowEl.textContent = mmss(now); },
+    onFollow: (on, reason, extra) => {
+      log(on ? 'follow_on' : 'follow_off', { reason, ...extra });
+      box.checked = on;
+      jump.hidden = on;
+      stateEl.textContent = on ? 'following' : 'paused (manual scroll)';
+    },
+  });
+  box.addEventListener('change', () => f.setFollow(box.checked, 'checkbox'));
+  jump.addEventListener('click', () => f.setFollow(true, 'jump'));
+  window.player = player; window.f = f; // poke at them from the console
+</script>
+</body>
+</html>

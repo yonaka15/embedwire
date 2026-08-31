@@ -1,0 +1,26 @@
+{
+  "name": "yt-follow",
+  "version": "0.1.0",
+  "description": "Talk to a YouTube embed over raw postMessage — no iframe_api script, works with youtube-nocookie — and keep a transcript following the video.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./connect": "./src/connect.js",
+    "./follow": "./src/follow.js"
+  },
+  "files": ["src", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["youtube", "iframe", "postmessage", "embed", "nocookie", "transcript", "interactive-transcript", "seek", "sync"],
+  "author": "yonaka15",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/yonaka15/yt-follow.git" },
+  "homepage": "https://github.com/yonaka15/yt-follow#readme",
+  "bugs": { "url": "https://github.com/yonaka15/yt-follow/issues" },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}
