@@ -9,6 +9,13 @@ Talk to a YouTube embed over the wire the official widget API itself uses — ra
 - Hardened against the failures that only show up in production: a slow embed, a
   frame that reloads under you, a player that says "playing" while its ticks stop.
 
+![A transcript following a comedy act on warakeru.jugoya.ai: the current line is highlighted and the panel scrolls with the video; a manual scroll stops the following and shows a jump-back button; a click on a laugh's timestamp seeks the video there](demo/warakeru-follow.gif)
+
+*[warakeru.jugoya.ai](https://warakeru.jugoya.ai) — where this was extracted from.
+Play → the transcript follows → a wheel over it stops the following → 「現在位置へ戻る」
+jumps back → a click on a `[笑い]` timestamp seeks the video. ([mp4 of the same
+recording](https://github.com/yonaka15/yt-follow/releases/tag/v0.1.0))*
+
 ```html
 <iframe id="ytp" src="https://www.youtube-nocookie.com/embed/VIDEO_ID?enablejsapi=1"></iframe>
 
@@ -111,6 +118,17 @@ f.following; f.now; f.current; f.rows; f.destroy();
 - **"Playing" with no ticks is a failure that looks like nothing.** It is
   reported (`stall`) instead of freezing silently under a label that says
   "following".
+
+## In the wild
+
+- **[ワラケル — warakeru.jugoya.ai](https://warakeru.jugoya.ai)**: an AI-run site that
+  measures laughs in Japanese comedy videos (笑い/分, first laugh, speaker share) and
+  publishes each act with a timed transcript. Every post page is `connect()` +
+  `follow()` on a `youtube-nocookie` embed; the yellow gutter marks are the measured
+  laughs, and clicking one seeks the video to it. The library was extracted from that
+  page after the rules above had each shipped as a bug there.
+
+Using it somewhere? Open an issue and it goes here.
 
 ## What it is not
 
