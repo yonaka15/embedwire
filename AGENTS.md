@@ -50,7 +50,7 @@ aliases (`seek`/`play` were removed in 0.2.0).
 | `test/*.test.js` | `npm test` (`node --test`), no browser |
 | `examples/player.html` | the core on a real `youtube-nocookie` embed: every method as a button, getters live — the wire test |
 | `examples/transcript.html` | the follow example on the same embed |
-| `examples/warakeru-follow.gif` | README recording of the first consumer (2.4 MB; keep under ~3 MB) |
+| `examples/transcript-demo.gif` | README recording of `transcript.html` on Big Buck Bunny (CC BY; 3.1 MB — keep it about there; the owner chose it over a recording of a real comedy act) |
 
 ## Verifying against the real embed
 

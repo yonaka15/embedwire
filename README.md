@@ -107,12 +107,12 @@ const off = player.on('stateChange', ({ state }) => …);   // returns unsubscri
 
 ## Example: a transcript that follows the video
 
-![A transcript following a comedy act on warakeru.jugoya.ai: the current line is highlighted and the panel scrolls with the video; a manual scroll stops the following and shows a jump-back button; a click on a laugh's timestamp seeks the video there](https://raw.githubusercontent.com/yonaka15/yt-follow/main/examples/warakeru-follow.gif)
+![examples/transcript.html following Big Buck Bunny: the current line is highlighted and the panel scrolls with the video; a manual scroll stops the following and shows a jump-back button; a click on a timestamp seeks the video there](https://raw.githubusercontent.com/yonaka15/yt-follow/main/examples/transcript-demo.gif)
 
-*[warakeru.jugoya.ai](https://warakeru.jugoya.ai), where this library was extracted
-from. Play → the transcript follows → a wheel over it stops the following →
-「現在位置へ戻る」 jumps back → a click on a `[笑い]` timestamp seeks the video.
-([mp4](https://github.com/yonaka15/yt-follow/releases/tag/v0.1.0))*
+*`examples/transcript.html` on [Big Buck Bunny](https://peach.blender.org/) (Blender
+Foundation, CC BY 3.0). Play → the transcript follows → a wheel over it stops the
+following → "back to the current line" jumps back → a click on a timestamp seeks the
+video. ([mp4](https://github.com/yonaka15/yt-follow/releases/tag/v0.2.0))*
 
 `follow(rowsEl, player, opts?)` is that panel, shipped as `yt-follow/follow` so
 it can be imported rather than copied. Rows are `[data-t]` elements (an empty
