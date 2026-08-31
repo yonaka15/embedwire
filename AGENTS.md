@@ -1,18 +1,32 @@
 # yt-follow — AGENTS.md
 
-Two plain-ESM functions, zero runtime dependencies. `src/connect.js` speaks the
-undocumented postMessage wire of a YouTube embed (`listening` → `infoDelivery`,
-`command`) without loading `iframe_api`; `src/follow.js` keeps a list of timed
-rows following that player. README.md is the API reference; this file is for
-changing the code.
+Zero runtime dependencies, plain ESM. **The package is `connect()`** — the IFrame
+Player API's methods/getters/events over the embed's own postMessage wire
+(`listening` → `initialDelivery` / `infoDelivery`, `command`) without loading
+`iframe_api`. `src/follow.js` (`yt-follow/follow`) is an EXAMPLE built on it — a
+transcript that follows the player — kept importable and tested because the first
+consumer uses it. README.md is the API reference; this file is for changing the code.
+
+Owner direction (2026-08-31): mirror the official reference — core API in the
+package, UI (transcript follow etc.) as examples. Method and event names follow
+the official ones (`playVideo`, `getDuration`, `stateChange`); do not invent
+aliases (`seek`/`play` were removed in 0.2.0).
 
 ## Guardrails
 
 - **The wire is YouTube's, not ours.** Every message shape here was taken from what
   `widgetapi.js` sends and what the embed answers. Do not "improve" a message; verify
-  against a real embed (`demo/`, served from the repo root — `python3 -m http.server`)
-  before merging a change to `connect.js`. The unit tests use a fake player and
-  cannot catch a wire regression.
+  against a real embed (`npm run demo` → `/examples/player.html`) before merging a
+  change to `connect.js`. The unit tests use a fake player and cannot catch a wire
+  regression. Measured 2026-08-31 on a nocookie embed: the player sends
+  `initialDelivery` (full info: `apiInterface` (60+ names), `duration`, `videoData`,
+  `volume`, `muted`, `playbackRate`, `availablePlaybackRates`, `playerState`, …), then
+  `onReady`, then `infoDelivery` patches (`currentTime`, `playerState`,
+  `playbackQuality`, `videoLoadedFraction`, …). There is NO `onStateChange` message —
+  the official API derives it from `playerState`, and so do we (`CHANGE_EVENTS`).
+- **Getters never round-trip.** They read the merged `info`; the official API does
+  the same. A getter that posts a command and awaits an answer would be a different
+  design — do not add one.
 - **Each rule in the file headers shipped as a bug first.** Keep asking until
   answered (a fixed try count gave up on slow embeds); every `load` is a new player;
   scroll only on row change; scroll the panel not the page; break follow on a
@@ -34,14 +48,16 @@ changing the code.
 | `src/follow.js` | rows ↔ player: current row, panel scroll, gestures, seek clicks |
 | `test/fake-player.js` | jsdom + an iframe whose `contentWindow.postMessage` is recorded; `say()`/`tick()`/`reload()` answer like the embed |
 | `test/*.test.js` | `npm test` (`node --test`), no browser |
-| `demo/index.html` | a real `youtube-nocookie` embed; the only wire test |
+| `examples/player.html` | the core on a real `youtube-nocookie` embed: every method as a button, getters live — the wire test |
+| `examples/transcript.html` | the follow example on the same embed |
+| `examples/warakeru-follow.gif` | README recording of the first consumer (2.4 MB; keep under ~3 MB) |
 
 ## Verifying against the real embed
 
 ```
-python3 -m http.server 4330 --bind 127.0.0.1   # from the repo root
-# open http://127.0.0.1:4330/demo/ — window.player / window.f are exposed
-player.command('mute'); player.play()          # autoplay needs mute without a gesture
+npm run demo                                   # http.server on 127.0.0.1:4330
+# open /examples/transcript.html — window.player / window.f are exposed
+player.mute(); player.playVideo()              # autoplay needs mute without a gesture
 f.seekTo(120)                                  # row 120 becomes current, panel scrolls
 fr = document.getElementById('ytp'); fr.src = fr.src   # loads → 2, ready stays true, no stall
 ```
@@ -51,7 +67,9 @@ on the frame's `load`); ticks ~4/s while playing; state 5 (cued) after a reload.
 
 ## Release
 
-`npm test` green → bump `package.json` version → `git tag vX.Y.Z` → push → `npm publish`
-(the consumer can also pin `github:yonaka15/yt-follow#vX.Y.Z`). First consumer:
-warakeru.jugoya.ai (`site/src/pages/posts/[...slug].astro`), which maps `on('*')`
-to its own telemetry names.
+`npm test` green → bump `package.json` version → `git tag vX.Y.Z` → push → `gh release
+create` → `npm publish`. First consumer: warakeru.jugoya.ai
+(`site/src/pages/posts/[...slug].astro`) pins the tag as an https tarball
+(`https://github.com/yonaka15/yt-follow/archive/refs/tags/vX.Y.Z.tar.gz` — the
+`github:` shorthand resolves to `git+ssh://` in a lockfile and Vercel has no ssh) and
+maps `on('*')` to its own telemetry names. Bump that pin when you tag.

@@ -1,5 +1,7 @@
-// follow(rowsEl, player) — keep a list of timed rows following a connected
-// player: the current row gets a class, the PANEL (never the page) scrolls to it
+// follow(rowsEl, player) — an EXAMPLE built on connect(): keep a list of timed
+// rows (a transcript) following the player. Importable as `yt-follow/follow`;
+// the core package is connect() alone, and this is what an app on top looks like.
+// It keeps a list of timed rows following a connected player: the current row gets a class, the PANEL (never the page) scrolls to it
 // when it changes, a click on a row's seek control jumps the video there, and a
 // reader's own gesture over the panel switches following off.
 //
@@ -106,15 +108,15 @@ export function follow(rowsEl, player, opts = {}) {
 
   const seekTo = (t, row = null, reason = 'seek') => {
     now = t;
-    player.seek(t, true);
-    player.play();
+    player.seekTo(t, true);
+    player.playVideo();
     setFollow(true, reason);
     onSeek?.(t, row);
   };
 
   // ── player → rows ──
   offs.push(
-    player.on('time', ({ t }) => {
+    player.on('timeUpdate', ({ t }) => {
       now = t;
       paint(following);
     })

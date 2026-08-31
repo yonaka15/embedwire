@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>yt-follow demo</title>
+<title>yt-follow — transcript example</title>
 <style>
   body { font: 14px/1.6 system-ui, sans-serif; margin: 0; padding: 16px; max-width: 720px; margin-inline: auto; }
   .embed { position: relative; aspect-ratio: 16/9; }
@@ -20,8 +20,8 @@
 </style>
 </head>
 <body>
-<h1>yt-follow</h1>
-<p>A transcript that follows a <code>youtube-nocookie</code> embed over raw <code>postMessage</code> — no <code>iframe_api</code> script loaded. Press play; wheel over the list to stop following; click a timestamp to seek.</p>
+<h1>yt-follow — transcript example</h1>
+<p>An example built on <code>connect()</code>: a transcript that follows a <code>youtube-nocookie</code> embed over raw <code>postMessage</code> — no <code>iframe_api</code> script loaded. Press play; wheel over the list to stop following; click a timestamp to seek.</p>
 
 <div class="embed">
   <!-- any video works; `enablejsapi=1` is the only requirement -->
@@ -37,7 +37,8 @@
 <pre data-log></pre>
 
 <script type="module">
-  import { connect, follow } from '../src/index.js';
+  import { connect } from '../src/index.js';
+  import { follow } from '../src/follow.js';
 
   // Fake "transcript": one row every 5 s of Big Buck Bunny.
   const rowsEl = document.querySelector('[data-rows]');
@@ -60,7 +61,7 @@
   const player = connect(document.getElementById('ytp'));
   player.on('*', log);
   player.on('ready', () => { stateEl.textContent = 'following'; });
-  player.on('gaveup', () => { stateEl.textContent = 'player never answered'; });
+  player.on('gaveUp', () => { stateEl.textContent = 'player never answered'; });
 
   const f = follow(rowsEl, player, {
     onTick: (now) => { nowEl.textContent = mmss(now); },

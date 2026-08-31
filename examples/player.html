@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>yt-follow — player example</title>
+<style>
+  body { font: 14px/1.6 system-ui, sans-serif; margin: 0; padding: 16px; max-width: 720px; margin-inline: auto; }
+  .embed { position: relative; aspect-ratio: 16/9; }
+  .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  button { font: inherit; padding: 4px 10px; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; font-family: ui-monospace, monospace; font-size: 12px; }
+  dt { color: #666; }
+  pre { font-size: 11px; background: #f6f6f6; padding: 8px; max-height: 160px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>yt-follow — player example</h1>
+<p>The IFrame Player API's methods and events over raw <code>postMessage</code>. No <code>iframe_api</code> script is loaded; check the network tab.</p>
+
+<div class="embed">
+  <iframe id="ytp" src="https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ?enablejsapi=1" title="demo" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+</div>
+<div class="bar">
+  <button data-cmd="playVideo">playVideo</button>
+  <button data-cmd="pauseVideo">pauseVideo</button>
+  <button data-cmd="stopVideo">stopVideo</button>
+  <button data-cmd="seekTo" data-args="[60, true]">seekTo(60)</button>
+  <button data-cmd="mute">mute</button>
+  <button data-cmd="unMute">unMute</button>
+  <button data-cmd="setVolume" data-args="[30]">setVolume(30)</button>
+  <button data-cmd="setPlaybackRate" data-args="[1.5]">setPlaybackRate(1.5)</button>
+  <button data-cmd="loadVideoById" data-args='["M7lc1UVf-VE"]'>loadVideoById(…)</button>
+</div>
+<dl data-getters></dl>
+<pre data-log></pre>
+
+<script type="module">
+  import { connect, PlayerState } from '../src/index.js';
+
+  const player = connect(document.getElementById('ytp'));
+  const logEl = document.querySelector('[data-log]');
+  const log = (name, props) => {
+    if (name === 'timeUpdate' || name === 'info') return; // several a second
+    logEl.textContent = `${name} ${JSON.stringify(props)}\n` + logEl.textContent;
+  };
+  player.on('*', log);
+
+  for (const b of document.querySelectorAll('[data-cmd]')) {
+    b.addEventListener('click', () => {
+      const args = b.dataset.args ? JSON.parse(b.dataset.args) : [];
+      player[b.dataset.cmd](...args);
+    });
+  }
+
+  const stateName = (s) => Object.keys(PlayerState).find((k) => PlayerState[k] === s) ?? s;
+  const getters = ['getCurrentTime', 'getDuration', 'getPlayerState', 'getVolume', 'isMuted',
+    'getPlaybackRate', 'getPlaybackQuality', 'getVideoUrl', 'getVideoLoadedFraction'];
+  const dl = document.querySelector('[data-getters]');
+  const paint = () => {
+    dl.innerHTML = '';
+    for (const g of getters) {
+      let v = player[g]();
+      if (g === 'getPlayerState') v = `${v} ${stateName(v)}`;
+      if (g === 'getCurrentTime' && typeof v === 'number') v = v.toFixed(2);
+      dl.insertAdjacentHTML('beforeend', `<dt>${g}()</dt><dd>${v === undefined ? '—' : v}</dd>`);
+    }
+    dl.insertAdjacentHTML('beforeend', `<dt>getVideoData().title</dt><dd>${player.getVideoData()?.title ?? '—'}</dd>`);
+    dl.insertAdjacentHTML('beforeend', `<dt>getApiInterface().length</dt><dd>${player.getApiInterface()?.length ?? '—'}</dd>`);
+  };
+  player.on('info', paint);
+  paint();
+  window.player = player; // poke at it from the console
+</script>
+</body>
+</html>

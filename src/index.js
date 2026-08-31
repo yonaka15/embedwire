@@ -1,2 +1,1 @@
-export { connect } from './connect.js';
-export { follow } from './follow.js';
+export { connect, PlayerState } from './connect.js';

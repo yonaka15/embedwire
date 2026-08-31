@@ -1,7 +1,7 @@
 {
   "name": "yt-follow",
-  "version": "0.1.0",
-  "description": "Talk to a YouTube embed over raw postMessage — no iframe_api script, works with youtube-nocookie — and keep a transcript following the video.",
+  "version": "0.2.0",
+  "description": "The YouTube IFrame Player API over raw postMessage — no iframe_api script, works with youtube-nocookie. playVideo/seekTo/getDuration/stateChange and the rest, plus a transcript-follow example.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -12,7 +12,8 @@
   "files": ["src", "README.md", "LICENSE"],
   "sideEffects": false,
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "demo": "python3 -m http.server 4330 --bind 127.0.0.1"
   },
   "keywords": ["youtube", "iframe", "postmessage", "embed", "nocookie", "transcript", "interactive-transcript", "seek", "sync"],
   "author": "yonaka15",

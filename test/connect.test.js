@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { connect } from '../src/connect.js';
+import { connect, PlayerState } from '../src/connect.js';
 import { setup, sleep } from './fake-player.js';
 
 const listenings = (posted) => posted.filter((m) => m.event === 'listening');
+const commands = (posted) => posted.filter((m) => m.event === 'command');
 
 test('keeps asking until the player answers, then stops', async () => {
   const { win, frame, posted, tick } = setup();
@@ -18,7 +19,7 @@ test('keeps asking until the player answers, then stops', async () => {
   await sleep(60);
   assert.equal(listenings(posted).length, n, 'no more asks after an answer');
   assert.ok(p.ready);
-  assert.deepEqual(events[0][0], 'ready');
+  assert.equal(events[0][0], 'ready');
   assert.ok(events[0][1].asks >= 3);
   p.destroy();
 });
@@ -27,7 +28,7 @@ test('gives up after giveUpAfter and reports it', async () => {
   const { win, frame } = setup();
   const p = connect(frame, { win, askInterval: 10, giveUpAfter: 40 });
   const seen = [];
-  p.on('gaveup', (e) => seen.push(e));
+  p.on('gaveUp', (e) => seen.push(e));
   await sleep(90);
   assert.equal(seen.length, 1);
   assert.ok(seen[0].asks >= 2);
@@ -50,33 +51,90 @@ test('ignores foreign origins, malformed data and other players', () => {
 test('accepts www.youtube.com as well as nocookie', () => {
   const { win, frame, say } = setup();
   const p = connect(frame, { win });
-  say({ info: { currentTime: 3 } }, 'https://www.youtube.com');
+  say({ event: 'infoDelivery', info: { currentTime: 3 } }, 'https://www.youtube.com');
   assert.ok(p.ready);
   p.destroy();
 });
 
-test('time and state events', () => {
-  const { win, frame, tick, say } = setup();
+test('initialDelivery fills the getters; infoDelivery patches them', () => {
+  const { win, frame, init, tick, say } = setup();
   const p = connect(frame, { win });
-  const times = [];
-  const states = [];
-  p.on('time', (e) => times.push(e.t));
-  p.on('state', (e) => states.push(e.state));
-  say({ info: { playerState: -1 } });
-  tick(0.5, 1);
-  tick(1.0, 1);
-  say({ info: { playerState: 2 } });
-  assert.deepEqual(times, [0.5, 1.0]);
-  assert.deepEqual(states, [-1, 1, 2], 'state emitted only on change');
-  assert.equal(p.state, 2);
+  assert.equal(p.getDuration(), undefined, 'nothing known before the player speaks');
+  init();
+  assert.equal(p.getDuration(), 635);
+  assert.equal(p.getPlayerState(), PlayerState.CUED);
+  assert.equal(p.getVolume(), 100);
+  assert.equal(p.isMuted(), false);
+  assert.equal(p.getPlaybackRate(), 1);
+  assert.deepEqual(p.getAvailablePlaybackRates(), [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
+  assert.equal(p.getVideoData().video_id, 'aqz-KE-bpKQ');
+  assert.equal(p.getVideoUrl(), 'https://www.youtube.com/watch?v=aqz-KE-bpKQ');
+  assert.deepEqual(p.getApiInterface(), ['playVideo', 'pauseVideo', 'seekTo', 'getDuration']);
+  tick(12.5, PlayerState.PLAYING);
+  assert.equal(p.getCurrentTime(), 12.5);
+  assert.equal(p.getPlayerState(), PlayerState.PLAYING);
+  assert.equal(p.getDuration(), 635, 'a patch keeps what it does not mention');
+  say({ event: 'infoDelivery', info: { muted: true, volume: 40 } });
+  assert.equal(p.isMuted(), true);
+  assert.equal(p.getVolume(), 40);
+  assert.equal(p.getInfo().duration, 635);
   p.destroy();
 });
 
-test('a reloaded frame is a NEW player: handshake restarts even though ready stays true', async () => {
-  const { win, frame, posted, tick, reload } = setup();
+test('change events are derived from info: stateChange, playbackRateChange, volumeChange, generic info', () => {
+  const { win, frame, init, tick, say } = setup();
+  const p = connect(frame, { win });
+  const ev = [];
+  for (const n of ['stateChange', 'playbackRateChange', 'playbackQualityChange', 'volumeChange', 'timeUpdate'])
+    p.on(n, (e) => ev.push([n, e]));
+  const infos = [];
+  p.on('info', (e) => infos.push(e.changed));
+  init(); // the starting state: `info` only, no change events
+  tick(0.5, 1);
+  tick(1.0, 1); // same state: no stateChange
+  say({ event: 'infoDelivery', info: { playerState: 2 } });
+  say({ event: 'infoDelivery', info: { playbackRate: 1.5 } });
+  say({ event: 'infoDelivery', info: { muted: true } });
+  say({ event: 'infoDelivery', info: { muted: true } }); // unchanged: nothing
+  say({ event: 'infoDelivery', info: { playbackQuality: 'hd720' } });
+  const names = ev.map((e) => e[0]);
+  assert.deepEqual(names, [
+    'stateChange', 'timeUpdate', // 1
+    'timeUpdate', // 1.0, same state
+    'stateChange', // 2
+    'playbackRateChange',
+    'volumeChange',
+    'playbackQualityChange',
+  ]);
+  assert.deepEqual(ev[0][1], { state: 1 });
+  assert.deepEqual(ev[3][1], { state: 2 });
+  assert.deepEqual(ev[4][1], { playbackRate: 1.5 });
+  assert.deepEqual(ev[5][1], { volume: 100, muted: true });
+  assert.deepEqual(ev[6][1], { playbackQuality: 'hd720' });
+  assert.deepEqual(infos[1], ['currentTime', 'playerState']);
+  assert.equal(infos.length, 7, 'an unchanged patch emits no info');
+  p.destroy();
+});
+
+test("the embed's own on* events pass through: onError → error", () => {
+  const { win, frame, say } = setup();
+  const p = connect(frame, { win });
+  const ev = [];
+  p.on('error', (e) => ev.push(e));
+  p.on('apiChange', (e) => ev.push(['api', e]));
+  say({ event: 'onReady', info: null });
+  say({ event: 'onError', info: 150 });
+  say({ event: 'onApiChange', info: null });
+  assert.deepEqual(ev, [{ data: 150 }, ['api', { data: null }]]);
+  p.destroy();
+});
+
+test('a reloaded frame is a NEW player: handshake restarts, info is forgotten, ready stays true', async () => {
+  const { win, frame, posted, init, tick, reload } = setup();
   const p = connect(frame, { win, askInterval: 15 });
+  init();
   tick(1);
-  assert.ok(p.ready);
+  assert.equal(p.getDuration(), 635);
   const before = listenings(posted).length;
   const loads = [];
   p.on('load', (e) => loads.push(e));
@@ -84,6 +142,7 @@ test('a reloaded frame is a NEW player: handshake restarts even though ready sta
   await sleep(50);
   assert.ok(listenings(posted).length >= before + 2, 'asks again after load');
   assert.equal(p.ready, true, 'ready is not withdrawn');
+  assert.equal(p.getDuration(), undefined, 'the old player info is gone');
   assert.deepEqual(loads.map((l) => l.n), [1]);
   tick(0.2);
   const n = listenings(posted).length;
@@ -92,7 +151,7 @@ test('a reloaded frame is a NEW player: handshake restarts even though ready sta
   p.destroy();
 });
 
-test('stall while playing, resume on the next tick; state reset on reload', async () => {
+test('stall while playing, resume on the next tick; no stall after a reload', async () => {
   const { win, frame, tick, reload } = setup();
   const p = connect(frame, { win, stallAfter: 20, stallPoll: 5 });
   const ev = [];
@@ -107,11 +166,9 @@ test('stall while playing, resume on the next tick; state reset on reload', asyn
   tick(2, 1);
   assert.equal(ev[1][0], 'resume');
   assert.equal(ev[1][1].had_tick, true);
-  // paused: no stall
-  tick(3, 2);
+  tick(3, 2); // paused
   await sleep(50);
   assert.equal(ev.length, 2, 'no stall while paused');
-  // playing again then reload: the carried "playing" must not judge the new player
   tick(4, 1);
   reload();
   await sleep(50);
@@ -124,7 +181,7 @@ test('"playing" with no tick ever is a stall with no gap', async () => {
   const p = connect(frame, { win, stallAfter: 10, stallPoll: 5 });
   const ev = [];
   p.on('stall', (e) => ev.push(e));
-  say({ info: { playerState: 1 } });
+  say({ event: 'infoDelivery', info: { playerState: 1 } });
   await sleep(40);
   assert.equal(ev.length, 1);
   assert.equal(ev[0].gap_s, null);
@@ -132,19 +189,24 @@ test('"playing" with no tick ever is a stall with no gap', async () => {
   p.destroy();
 });
 
-test('commands carry the id; seek/play/pause helpers', () => {
+test('commands carry the official names and the id; command() reaches anything', () => {
   const { win, frame, posted } = setup();
   const p = connect(frame, { win });
-  p.seek(12.5);
-  p.play();
-  p.pause();
-  const cmds = posted.filter((m) => m.event === 'command');
-  assert.deepEqual(cmds.map((c) => [c.func, c.args]), [
+  p.seekTo(12.5);
+  p.playVideo();
+  p.pauseVideo();
+  p.setVolume(30);
+  p.loadVideoById({ videoId: 'x', startSeconds: 4 });
+  p.command('setPlaybackQuality', ['hd720']);
+  assert.deepEqual(commands(posted).map((c) => [c.func, c.args]), [
     ['seekTo', [12.5, true]],
     ['playVideo', []],
     ['pauseVideo', []],
+    ['setVolume', [30]],
+    ['loadVideoById', [{ videoId: 'x', startSeconds: 4 }]],
+    ['setPlaybackQuality', ['hd720']],
   ]);
-  assert.ok(cmds.every((c) => c.id === 'ytp'));
+  assert.ok(commands(posted).every((c) => c.id === 'ytp'));
   p.destroy();
 });
 
