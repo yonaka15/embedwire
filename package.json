@@ -1,7 +1,7 @@
 {
-  "name": "yt-follow",
-  "version": "0.2.0",
-  "description": "The YouTube IFrame Player API over raw postMessage — no iframe_api script, works with youtube-nocookie. playVideo/seekTo/getDuration/stateChange and the rest, plus a transcript-follow example.",
+  "name": "embedwire",
+  "version": "0.3.0",
+  "description": "Control a YouTube embed over the postMessage wire its own widget uses — no iframe_api script, works with youtube-nocookie. Method and event names follow the IFrame Player API (playVideo, seekTo, getDuration, stateChange); ships a transcript-follow example.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -9,18 +9,37 @@
     "./connect": "./src/connect.js",
     "./follow": "./src/follow.js"
   },
-  "files": ["src", "README.md", "LICENSE"],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
   "scripts": {
     "test": "node --test test/*.test.js",
     "demo": "python3 -m http.server 4330 --bind 127.0.0.1"
   },
-  "keywords": ["youtube", "iframe", "postmessage", "embed", "nocookie", "transcript", "interactive-transcript", "seek", "sync"],
+  "keywords": [
+    "youtube",
+    "iframe",
+    "postmessage",
+    "embed",
+    "nocookie",
+    "transcript",
+    "interactive-transcript",
+    "seek",
+    "sync"
+  ],
   "author": "yonaka15",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/yonaka15/yt-follow.git" },
-  "homepage": "https://github.com/yonaka15/yt-follow#readme",
-  "bugs": { "url": "https://github.com/yonaka15/yt-follow/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yonaka15/embedwire.git"
+  },
+  "homepage": "https://github.com/yonaka15/embedwire#readme",
+  "bugs": {
+    "url": "https://github.com/yonaka15/embedwire/issues"
+  },
   "devDependencies": {
     "jsdom": "^30.0.1"
   }

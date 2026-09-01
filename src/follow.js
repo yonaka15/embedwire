@@ -1,5 +1,5 @@
 // follow(rowsEl, player) — an EXAMPLE built on connect(): keep a list of timed
-// rows (a transcript) following the player. Importable as `yt-follow/follow`;
+// rows (a transcript) following the player. Importable as `embedwire/follow`;
 // the core package is connect() alone, and this is what an app on top looks like.
 // It keeps a list of timed rows following a connected player: the current row gets a class, the PANEL (never the page) scrolls to it
 // when it changes, a click on a row's seek control jumps the video there, and a

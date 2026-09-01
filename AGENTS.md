@@ -1,9 +1,9 @@
-# yt-follow — AGENTS.md
+# embedwire — AGENTS.md
 
 Zero runtime dependencies, plain ESM. **The package is `connect()`** — the IFrame
 Player API's methods/getters/events over the embed's own postMessage wire
 (`listening` → `initialDelivery` / `infoDelivery`, `command`) without loading
-`iframe_api`. `src/follow.js` (`yt-follow/follow`) is an EXAMPLE built on it — a
+`iframe_api`. `src/follow.js` (`embedwire/follow`) is an EXAMPLE built on it — a
 transcript that follows the player — kept importable and tested because the first
 consumer uses it. README.md is the API reference; this file is for changing the code.
 
@@ -14,8 +14,8 @@ aliases (`seek`/`play` were removed in 0.2.0).
 
 ## Guardrails
 
-- **The wire is YouTube's, not ours.** Every message shape here was taken from what
-  `widgetapi.js` sends and what the embed answers. Do not "improve" a message; verify
+- **The wire is YouTube's, not ours.** Every message shape here was observed on a real
+  embed — what the player widget sends and what it answers. Do not "improve" a message; verify
   against a real embed (`npm run demo` → `/examples/player.html`) before merging a
   change to `connect.js`. The unit tests use a fake player and cannot catch a wire
   regression. Measured 2026-08-31 on a nocookie embed: the player sends
@@ -70,6 +70,6 @@ on the frame's `load`); ticks ~4/s while playing; state 5 (cued) after a reload.
 `npm test` green → bump `package.json` version → `git tag vX.Y.Z` → push → `gh release
 create` → `npm publish`. First consumer: warakeru.jugoya.ai
 (`site/src/pages/posts/[...slug].astro`) pins the tag as an https tarball
-(`https://github.com/yonaka15/yt-follow/archive/refs/tags/vX.Y.Z.tar.gz` — the
+(`https://github.com/yonaka15/embedwire/archive/refs/tags/vX.Y.Z.tar.gz` — the
 `github:` shorthand resolves to `git+ssh://` in a lockfile and Vercel has no ssh) and
 maps `on('*')` to its own telemetry names. Bump that pin when you tag.

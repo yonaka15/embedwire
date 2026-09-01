@@ -1,22 +1,23 @@
-# yt-follow
+# embedwire
 
-The [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference)'s
-methods and events — `playVideo`, `seekTo`, `getDuration`, `stateChange`, … — over
-the wire the official widget itself uses (raw `postMessage`), **without loading
-`https://www.youtube.com/iframe_api`**.
+Control a YouTube embed over the `postMessage` wire its own widget uses, **without
+loading `https://www.youtube.com/iframe_api`**. Method and event names follow the
+[IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) you
+already know — `playVideo`, `seekTo`, `getDuration`, `stateChange`, … — so the code
+reads the same; what runs underneath is this small library, not Google's script.
 
 - Works with `www.youtube-nocookie.com`; adds no third-party script, sets no cookie of its own.
 - Zero dependencies, one function, plain ESM.
 - Hardened against the failures that only show up in production: a slow embed, a
   frame that reloads under you, a player that says "playing" while its ticks stop.
 - Ships an example of what to build on it: a transcript that follows the video
-  (`yt-follow/follow`), the reason this exists.
+  (`embedwire/follow`), the reason this exists.
 
 ```html
 <iframe id="ytp" src="https://www.youtube-nocookie.com/embed/VIDEO_ID?enablejsapi=1"></iframe>
 
 <script type="module">
-  import { connect, PlayerState } from 'yt-follow';
+  import { connect, PlayerState } from 'embedwire';
 
   const player = connect(document.getElementById('ytp'));
   player.on('ready', () => console.log(player.getDuration(), player.getVideoData().title));
@@ -31,9 +32,12 @@ the wire the official widget itself uses (raw `postMessage`), **without loading
 ## Install
 
 ```
-npm install yt-follow
+npm install embedwire
 ```
-or straight from GitHub: `npm install github:yonaka15/yt-follow`.
+or straight from GitHub: `npm install github:yonaka15/embedwire`.
+
+Renamed from `yt-follow` in 0.3.0 (same code, new import path); the old name stays
+on npm as 0.2.0 with a deprecation notice.
 
 ## `connect(iframe, opts?)`
 
@@ -49,7 +53,7 @@ sent every `askInterval` ms until the player answers.
 | `stallPoll` | `2000` | ms between stall checks |
 | `origin` | `/(^|\.)youtube(-nocookie)?\.com$/` | accepted message-origin hostnames |
 
-### Methods — the official names
+### Methods — the IFrame Player API's names
 
 Commands are posted to the player:
 
@@ -66,7 +70,7 @@ player.command(name, args);   // anything the embed lists in getApiInterface()
 
 Getters read a local copy of the player's info — the embed sends it in full once
 (`initialDelivery`) and then as patches with every tick, which is exactly how the
-official API answers them too. They are `undefined` until the player has spoken:
+official script answers them too. They are `undefined` until the player has spoken:
 
 ```js
 player.getCurrentTime(); getDuration(); getPlayerState();
@@ -79,7 +83,7 @@ player.getApiInterface();     // every function the embed accepts
 player.getInfo();             // the merged object, for anything without a getter
 ```
 
-`PlayerState` carries the official numbers: `UNSTARTED -1, ENDED 0, PLAYING 1,
+`PlayerState` carries the IFrame Player API's numbers: `UNSTARTED -1, ENDED 0, PLAYING 1,
 PAUSED 2, BUFFERING 3, CUED 5`.
 
 ### Events
@@ -107,14 +111,14 @@ const off = player.on('stateChange', ({ state }) => …);   // returns unsubscri
 
 ## Example: a transcript that follows the video
 
-![examples/transcript.html following Big Buck Bunny: the current line is highlighted and the panel scrolls with the video; a manual scroll stops the following and shows a jump-back button; a click on a timestamp seeks the video there](https://raw.githubusercontent.com/yonaka15/yt-follow/main/examples/transcript-demo.gif)
+![examples/transcript.html following Big Buck Bunny: the current line is highlighted and the panel scrolls with the video; a manual scroll stops the following and shows a jump-back button; a click on a timestamp seeks the video there](https://raw.githubusercontent.com/yonaka15/embedwire/main/examples/transcript-demo.gif)
 
 *`examples/transcript.html` on [Big Buck Bunny](https://peach.blender.org/) (Blender
 Foundation, CC BY 3.0). Play → the transcript follows → a wheel over it stops the
 following → "back to the current line" jumps back → a click on a timestamp seeks the
-video. ([mp4](https://github.com/yonaka15/yt-follow/releases/tag/v0.2.0))*
+video. ([mp4](https://github.com/yonaka15/embedwire/releases/tag/v0.2.0))*
 
-`follow(rowsEl, player, opts?)` is that panel, shipped as `yt-follow/follow` so
+`follow(rowsEl, player, opts?)` is that panel, shipped as `embedwire/follow` so
 it can be imported rather than copied. Rows are `[data-t]` elements (an empty
 `data-t` is skipped) sorted by their start second:
 
@@ -124,8 +128,8 @@ it can be imported rather than copied. Rows are `[data-t]` elements (an empty
   <li data-t="4.2"><button data-seek disabled>0:04</button> Second line…</li>
 </ol>
 <script type="module">
-  import { connect } from 'yt-follow';
-  import { follow } from 'yt-follow/follow';
+  import { connect } from 'embedwire';
+  import { follow } from 'embedwire/follow';
   const player = connect(document.getElementById('ytp'));
   const f = follow(document.querySelector('[data-rows]'), player);
 </script>
@@ -183,11 +187,15 @@ Using it somewhere? Open an issue and it goes here.
 
 ## What it is not
 
+Not the IFrame Player API, and not affiliated with or endorsed by YouTube — it
+borrows the API's method and event names so code reads the same, nothing more.
 Not a player *creator* — you write the `<iframe>` (with `?enablejsapi=1`) and hand
 it over; there is no `new YT.Player('div', {videoId})`. Not a transcript editor or
-renderer — bring your own rows. The wire is the one YouTube's `widgetapi.js`
-speaks; it is undocumented, and if YouTube changes it this breaks together with
-every page that uses the official API's transport.
+renderer — bring your own rows. The wire is what the embed sends and answers,
+observed on a real player; it is undocumented, and if YouTube changes it this
+breaks together with every page that uses the official script's transport. The
+official script is the supported path; this is for when you specifically do not
+want it (nocookie, CSP, one less third-party request) and accept that trade.
 
 ## Development
 

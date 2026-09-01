@@ -1,13 +1,14 @@
-// connect(iframe) — the YouTube IFrame Player API's surface, over the wire the
-// official widget itself uses (postMessage `listening` → `initialDelivery` /
-// `infoDelivery` / `command`), without loading https://www.youtube.com/iframe_api.
+// connect(iframe) — a YouTube embed driven over the postMessage wire its own
+// widget uses (`listening` → `initialDelivery` / `infoDelivery` / `command`),
+// without loading https://www.youtube.com/iframe_api. Method and event names
+// follow the IFrame Player API so code reads the same; this is not that API.
 // Works with www.youtube-nocookie.com, adds no third-party script, sets no cookie
 // of its own. The embed must be created with `?enablejsapi=1`.
 //
-// Methods carry the official names (playVideo, seekTo, getDuration, …). Commands
+// Methods carry the IFrame Player API's names (playVideo, seekTo, getDuration, …). Commands
 // are posted; getters read a local copy of the player's `info`, which the embed
 // sends in full once (`initialDelivery`) and then as patches (`infoDelivery`) —
-// exactly what the official API does, so a getter is as fresh as the last tick.
+// exactly what the official script does, so a getter is as fresh as the last tick.
 //
 // Rules learned in production, each one a bug that shipped once:
 //  - The player ignores a `listening` sent before its own script runs, so we keep
