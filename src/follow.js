@@ -15,9 +15,16 @@
 //  - Break follow on a GESTURE (wheel / touchmove / keys), never on the `scroll`
 //    event — our own scroll fires the same event, and telling them apart by
 //    timing fails while the player ticks continuously.
-//  - A gesture is reported with whether the panel HAD ROOM to scroll that way
-//    (`room`); a wheel over a panel already at its end scrolls the page instead,
-//    and if that turns out to be common the listener is too eager, not the reader.
+//  - A gesture breaks follow only when the panel HAD ROOM to scroll that way
+//    (`room`). A wheel or swipe over a panel already at its end scrolls the PAGE
+//    instead, so it was never aimed at the transcript. This started as a `room`
+//    field on the report and a note that "if that turns out to be common the
+//    listener is too eager, not the reader"; measured on a live site it was 35 %
+//    of all breaks (31 % of mobile swipes), and only 20 % of readers ever turned
+//    following back on, so a spurious break lasted the whole visit.
+//  - Ignoring a gesture must still be VISIBLE: `onGesture` fires for every wheel
+//    or swipe over the panel with `broke` saying whether it took follow off. A
+//    listener that silently does nothing cannot be shown to be right.
 
 const KEYS = ['PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
 
@@ -37,6 +44,7 @@ const KEYS = ['PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
  * @param {(now:number, row:Element|null)=>void} [opts.onTick]    every tick
  * @param {(row:Element|null, now:number)=>void} [opts.onChange]  when the current row changes
  * @param {(on:boolean, reason:string, extra:object)=>void} [opts.onFollow]
+ * @param {(reason:string, extra:{dy:number, room:boolean|null, broke:boolean})=>void} [opts.onGesture]  every wheel/touchmove over the panel while following, ignored ones included
  * @param {(t:number, row:Element|null)=>void} [opts.onSeek]
  */
 export function follow(rowsEl, player, opts = {}) {
@@ -53,6 +61,7 @@ export function follow(rowsEl, player, opts = {}) {
     onTick,
     onChange,
     onFollow,
+    onGesture,
     onSeek,
   } = opts;
   if (!rowsEl || !player) throw new TypeError('follow(rowsEl, player): both are required');
@@ -130,6 +139,16 @@ export function follow(rowsEl, player, opts = {}) {
   }
 
   // ── reader → player ──
+  // A scroll gesture over the panel. It breaks follow only if the panel could
+  // actually have scrolled that way; otherwise the browser scrolled the PAGE and
+  // the reader was never touching the transcript. Reported either way.
+  const gesture = (reason, dy) => {
+    const r = room(dy);
+    const broke = r === true;
+    if (broke) setFollow(false, reason, { dy, room: r });
+    onGesture?.(reason, { dy, room: r, broke });
+  };
+
   const onClick = (e) => {
     const btn = e.target.closest?.(seekSelector);
     if (!btn || !player.ready) return;
@@ -143,17 +162,14 @@ export function follow(rowsEl, player, opts = {}) {
     touchY = e.touches?.[0]?.clientY ?? null;
   };
   const onWheel = (e) => {
-    if (following && player.ready) {
-      const dy = Math.round(e.deltaY);
-      setFollow(false, 'wheel', { dy, room: room(dy) });
-    }
+    if (following && player.ready) gesture('wheel', Math.round(e.deltaY));
   };
   const onTouchMove = (e) => {
     if (!(following && player.ready)) return;
     const y = e.touches?.[0]?.clientY;
     // finger down = content up = scrolling toward the end (positive dy)
     const dy = touchY != null && y != null ? Math.round(touchY - y) : 0;
-    setFollow(false, 'touchmove', { dy, room: room(dy) });
+    gesture('touchmove', dy);
   };
   const onKeyDown = (e) => {
     if (keys.includes(e.key) && following && player.ready) setFollow(false, 'keydown', { key: e.key });

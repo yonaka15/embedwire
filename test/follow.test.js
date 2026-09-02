@@ -78,10 +78,72 @@ test('a wheel over the panel breaks follow and reports room; jump back resumes a
   f.setFollow(true, 'jump');
   assert.equal(scrolls.length, 2, 'resuming scrolls to the current row');
   assert.deepEqual(fol[1], [true, 'jump', {}]);
-  // at the end of the panel a downward wheel has no room
+  // at the end of the panel a downward wheel has no room: the PAGE scrolled, so
+  // the gesture was never aimed at the transcript and follow stays on
   ol.scrollTop = 100;
   ol.dispatchEvent(new win.WheelEvent('wheel', { deltaY: 50 }));
-  assert.equal(fol[2][2].room, false);
+  assert.equal(f.following, true, 'a gesture with no room does not break follow');
+  assert.equal(fol.length, 2, 'and reports no follow change');
+  f.destroy();
+  player.destroy();
+});
+
+test('onGesture reports every gesture, ignored ones included', () => {
+  const { win, ol, player, tick } = page();
+  const seen = [];
+  const fol = [];
+  const f = follow(ol, player, {
+    onGesture: (reason, extra) => seen.push([reason, extra]),
+    onFollow: (on, reason) => fol.push([on, reason]),
+  });
+  tick(0);
+
+  // up, from the top of the panel: no room, the page scrolls
+  ol.dispatchEvent(new win.WheelEvent('wheel', { deltaY: -80 }));
+  assert.deepEqual(seen[0], ['wheel', { dy: -80, room: false, broke: false }]);
+  assert.equal(f.following, true);
+  assert.equal(fol.length, 0, 'an ignored gesture is not a follow change');
+
+  // a horizontal / jittery wheel has no direction at all
+  ol.dispatchEvent(new win.WheelEvent('wheel', { deltaY: 0 }));
+  assert.deepEqual(seen[1], ['wheel', { dy: 0, room: null, broke: false }]);
+  assert.equal(f.following, true);
+
+  // down, with room: a real panel scroll
+  ol.dispatchEvent(new win.WheelEvent('wheel', { deltaY: 90 }));
+  assert.deepEqual(seen[2], ['wheel', { dy: 90, room: true, broke: true }]);
+  assert.equal(f.following, false);
+  assert.deepEqual(fol, [[false, 'wheel']]);
+
+  // and once follow is off the listener is quiet
+  ol.dispatchEvent(new win.WheelEvent('wheel', { deltaY: 90 }));
+  assert.equal(seen.length, 3);
+  f.destroy();
+  player.destroy();
+});
+
+test('a swipe that only scrolls the page keeps follow (the mobile case)', () => {
+  const { win, ol, player, tick } = page();
+  const seen = [];
+  const f = follow(ol, player, { onGesture: (r, x) => seen.push([r, x]) });
+  tick(0);
+  const touch = (type, y) => {
+    const e = new win.Event(type, { bubbles: true });
+    e.touches = [{ clientY: y }];
+    ol.dispatchEvent(e);
+  };
+  // panel at the top, finger down = reader pulling the PAGE back up
+  touch('touchstart', 200);
+  touch('touchmove', 260);
+  assert.deepEqual(seen[0], ['touchmove', { dy: -60, room: false, broke: false }]);
+  assert.equal(f.following, true, 'the panel could not have scrolled up');
+
+  // panel at its end, finger up = reader pushing the PAGE further down
+  ol.scrollTop = 100;
+  touch('touchstart', 260);
+  touch('touchmove', 200);
+  assert.deepEqual(seen[1], ['touchmove', { dy: 60, room: false, broke: false }]);
+  assert.equal(f.following, true, 'the panel could not have scrolled down');
   f.destroy();
   player.destroy();
 });
