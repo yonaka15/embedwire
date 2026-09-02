@@ -32,6 +32,15 @@ aliases (`seek`/`play` were removed in 0.2.0).
   scroll only on row change; scroll the panel not the page; break follow on a
   gesture never on `scroll`; "playing" with no ticks is a `stall`. Removing one
   re-ships its bug — the README's "Why these rules" section is the record.
+- ⭐ **A field added "in case it matters" has to be READ, or it decides nothing.**
+  `room` shipped in 0.2.0 with a note saying the listener was too eager if
+  `room: false` turned out to be common. Nobody looked for two versions. When it
+  was finally measured on a live site (2026-09-02, 66 breaks / 60 readers) it was
+  35 % of every break — 31 % of mobile swipes — and following came back for only
+  20 % of the readers who lost it. 0.4.0 breaks on `room: true` alone. The rule
+  this leaves behind: **ignoring an input must stay observable** (`onGesture`
+  fires with `broke: false`), because a listener that silently does nothing looks
+  identical whether it is right or wrong.
 - **No third-party script, no cookie, no network** — that is the reason this exists
   next to the official IFrame API. A PR that adds a dependency or a fetch is a
   different library.

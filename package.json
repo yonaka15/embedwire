@@ -1,7 +1,7 @@
 {
   "name": "embedwire",
-  "version": "0.3.0",
-  "description": "Control a YouTube embed over the postMessage wire its own widget uses — no iframe_api script, works with youtube-nocookie. Method and event names follow the IFrame Player API (playVideo, seekTo, getDuration, stateChange); ships a transcript-follow example.",
+  "version": "0.4.0",
+  "description": "Control a YouTube embed over the postMessage wire its own widget uses \u2014 no iframe_api script, works with youtube-nocookie. Method and event names follow the IFrame Player API (playVideo, seekTo, getDuration, stateChange); ships a transcript-follow example.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

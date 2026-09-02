@@ -137,7 +137,9 @@ it can be imported rather than copied. Rows are `[data-t]` elements (an empty
 
 The current row gets `class="is-now"`, the list (not the page) scrolls to it when
 it changes, a click on a timestamp seeks the video, and a wheel / touch / arrow key
-over the list stops following until `f.setFollow(true)`.
+over the list stops following until `f.setFollow(true)` — but only when the list
+could actually have scrolled that way. A swipe over a list already at its end
+scrolls the *page*, and was never aimed at the transcript.
 
 | option | default | |
 |---|---|---|
@@ -149,6 +151,7 @@ over the list stops following until `f.setFollow(true)`.
 | `keys` | PageUp/Down, Arrow Up/Down, Home, End | keys that break follow |
 | `onTick(now, row)` / `onChange(row, now)` | | every tick / when the current row changes |
 | `onFollow(on, reason, extra)` | | `reason`: `wheel` `touchmove` `keydown` `seek` or yours; `extra.room` says whether the panel could have scrolled that way |
+| `onGesture(reason, extra)` | | every wheel/touchmove over the panel, ignored ones included; `extra.broke` says whether it stopped following |
 | `onSeek(t, row)` | | after a seek |
 
 `f.setFollow(on, reason)`, `f.seekTo(t)`, `f.following`, `f.now`, `f.current`, `f.rows`, `f.destroy()`.
@@ -174,6 +177,13 @@ Both examples run from the repo: `npm run demo`, then
   animation), **scroll the panel, not the page** (`scrollIntoView` unpins the
   video), **break follow on a gesture, never on `scroll`** (our own scroll fires
   the same event).
+- **A gesture the panel could not have acted on is not the reader's.** v0.3.0
+  reported `room` and left it at that. Two days of a live site said 35 % of all
+  breaks (31 % of mobile swipes) had `room: false` — a finger on its way down the
+  *page* passing over the transcript — and only 20 % of readers who lost following
+  ever turned it back on, so each one lasted the rest of the visit. v0.4.0 breaks
+  following only on `room: true`, and reports the ignored gestures through
+  `onGesture` so the change can be checked rather than assumed.
 
 ## In the wild
 
